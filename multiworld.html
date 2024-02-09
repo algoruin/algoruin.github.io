@@ -20,15 +20,7 @@
         <label for="seeddonedialog" class="modal-close" ></label>
         <h3 class="section">Seed generation complete!</h3>
         <p class="section">Seed: <span id="seedSpan">...</span></p>
-        <p class="section">
-            <button id="spoilerButton" class="primary large" onclick="downloadSpoilers()">Download Spoiler Log</button>
-            <a class="button large primary" style="" id="magpieLink">Open in Magpie</a>
-        </p>
-        <p class="section" style="display: flex; align-items: center;">
-            Share:
-            <input id="shareseed" style="flex-grow: 1; margin-right: 0px" readonly/>
-            <button id="shareseedbutton" style="margin-left: 0px" onclick="ID('shareseed').select(); navigator.clipboard.writeText(ID('shareseed').value); alert('Link copied to clipboard', 'LADXR')"><span class="icon-link"></span></button>
-        </p>
+        <p class="section"><button id="spoilerButton" class="primary large" onclick="downloadSpoilers()">Download Spoiler Log</button></p>
     </div>
 </div>
 <input type="checkbox" id="errordialog" class="modal">
@@ -84,14 +76,22 @@
             <input style="width:100%" id="submitbutton" type="submit" value="Randomize!" disabled/>
         </div>
     </div>
+
+    <div class="row">
+        <div class="col-sm-12">
+            <h1>Settings strings:</h1>
+        </div>
+        <div class="col-sm-12 col-md-12 tooltip bottom" aria-label="List of short-setting-strings, one per player.">
+            <textarea id="mwsettings" name="mwsettings" style="width:100%; height: 300px; resize: vertical">hsHTWRl
+hsHTWRl</textarea>
+        </div>
+    </div>
 </div>
 
 
 <script src="js/options.js"></script>
 <script src="js/ui.js"></script>
 <script>"use strict";
-var roms = [];
-
 function ID(s) { return document.getElementById(s); }
 
 var idx = options.findIndex((e) => e.category != "Main");
@@ -99,8 +99,34 @@ options.splice(idx, 0, {
     key: 'spoilerformat', category: "Main", label: "Spoiler Format",
     options: [{key: 'none', label: 'None'}, {key: "text", label: 'Text'}, {key: 'json', label: 'JSON'}], default: 'none',
     description: "Affects how the spoiler log is generated.\n[None] No spoiler log is generated. One can still be manually dumped later.\n[Text] Creates a .txt file meant for a human to read.\n[JSON] Creates a .json file with a little more information and meant for a computer to read."});
-buildUI(function(s) { return s.key != 'forwardfactor'; });
+buildUI(function(s) { return s.key == 'seed' || s.key == 'forwardfactor' || s.key == "spoilerformat"; });
 
+async function startRomGeneration()
+{
+    ID("generatingdialog").checked = true;
+    //randomGenerationString();
+    var buffer = getRomArray();
+    var args = ["--short", updateSettingsString()];
+    var e = ID("spoilerformat");
+    if (e && e.value != 'none') {
+        args.push("--spoilerformat");
+        args.push(e.value);
+    }
+    for(var sss of ID("mwsettings").value.split("\n"))
+    {
+        sss = sss.trim();
+        if (sss == "") continue;
+        args.push("--multiworld");
+        args.push(sss);
+    }
+    await postToWorker({"input.gbc": buffer, "args": args, "id": 0});
+}
+
+function seedStdout(message)
+{
+    console.log(message);
+    ID("generatingtext").innerText = message;
+}
 </script>
 </body>
 </html>
